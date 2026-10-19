@@ -15,7 +15,7 @@
 <title>Livro de Notas</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Instrument+Sans:wght@500;600&family=Literata:wght@400;600&display=swap">
 <style>
-/* Layout: uma página de livro ocupa a tela, barra de ferramentas embaixo, folha que vira em 3D sobre a lombada à esquerda. Fotos são camadas livres sobre o texto. */
+/* Layout: uma página de livro ocupa a tela, barra fixa embaixo, folha que vira em 3D sobre a lombada à esquerda. Fotos, desenho e título da capa são camadas livres sobre a folha. */
 :root {
   --desk: #c9cfcc;
   --paper: #f5f1e6;
@@ -147,6 +147,11 @@ body {
 .handle[data-k="sw"] { left: 0; top: 100%; cursor: nesw-resize; }
 .handle.rot { left: 50%; top: calc(100% + 30px); cursor: grab; background: var(--accent); }
 
+/* Desenho */
+.draw { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 7; pointer-events: none; }
+.drawing .draw { pointer-events: auto; touch-action: none; cursor: crosshair; }
+.drawing .content { -webkit-user-select: none; user-select: none; }
+
 /* Capa */
 .sheet.cover { background: linear-gradient(140deg, var(--cover-hi), var(--cover)); color: var(--foil); }
 .sheet.cover::after {
@@ -154,17 +159,28 @@ body {
   border: 1px solid var(--foil); border-radius: 2px; opacity: .75;
 }
 .cover-frame {
-  position: absolute; inset: 34px 32px 34px 56px; z-index: 3;
+  position: absolute; inset: 34px 32px 34px 56px; z-index: 3; pointer-events: none;
   display: flex; flex-direction: column; justify-content: space-between;
 }
 .cover-kicker { font: 600 11px/1 var(--font-ui); letter-spacing: .26em; text-transform: uppercase; }
+.cover-foot { font: 500 12px/1 var(--font-ui); letter-spacing: .12em; opacity: .75; font-variant-numeric: tabular-nums; }
+.title-box { position: absolute; z-index: 6; width: 76%; pointer-events: auto; }
 .cover-title {
   font-family: var(--font-display); font-size: 40px; line-height: 1.1; text-wrap: balance;
   outline: none; word-break: break-word; min-height: 1.1em;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .35);
 }
 .cover-title:empty::before { content: attr(data-placeholder); color: color-mix(in srgb, var(--foil) 45%, transparent); }
 .cover-rule { width: 56px; height: 2px; margin-top: 20px; background: var(--foil); }
-.cover-foot { font: 500 12px/1 var(--font-ui); letter-spacing: .12em; opacity: .75; font-variant-numeric: tabular-nums; }
+.grip {
+  position: absolute; left: -6px; top: -38px; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--foil); color: var(--cover);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .4); touch-action: none; cursor: grab;
+}
+.grip::after { content: ""; position: absolute; inset: -8px; }
+.grip svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.drawing .title-box, .drawing .pimg, .drawing .grip { pointer-events: none; }
 
 /* Folha que vira */
 .leaf {
@@ -181,7 +197,7 @@ body {
   background: linear-gradient(90deg, rgba(0, 0, 0, .14), rgba(0, 0, 0, 0) 40px), var(--paper);
 }
 
-/* Botão de som */
+/* Botão de som, etiqueta de leitura, aviso */
 .snd {
   position: absolute; top: 6px; right: 6px; z-index: 7;
   width: 34px; height: 34px; padding: 0;
@@ -193,9 +209,23 @@ body {
 .snd svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .snd[aria-pressed="false"] .on { display: none; }
 .snd[aria-pressed="true"] .off { display: none; }
+.readtag {
+  position: absolute; top: 8px; left: 38px; z-index: 7; max-width: calc(100% - 100px);
+  padding: 7px 11px; border-radius: 999px;
+  background: var(--ui-fg); color: var(--btn);
+  font: 600 12px/1 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.toast {
+  position: absolute; left: 50%; bottom: 16px; z-index: 9; transform: translateX(-50%);
+  width: max-content; max-width: 90%; padding: 10px 14px; border-radius: 10px;
+  background: var(--ui-fg); color: var(--btn);
+  font: 600 13px/1.35 var(--font-ui); text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+}
 
 /* Barra de ferramentas */
-.bar { display: flex; gap: 8px; }
+.dock { height: 88px; display: flex; flex-direction: column; justify-content: center; }
+.bar { display: flex; gap: 6px; }
 .bar button, .imgbar button {
   flex: 1; min-width: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
@@ -205,8 +235,8 @@ body {
   font: 600 11px/1 var(--font-ui); letter-spacing: .02em;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
+.bar button.arrow { flex: .55; }
 .bar button:disabled { opacity: .35; cursor: default; }
-.bar button.armed { background: var(--danger); color: #fff; }
 .bar svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .cover-title:focus-visible { outline-color: var(--foil); }
@@ -218,6 +248,39 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
 }
 .imgbar button { flex: none; flex-direction: row; min-height: 40px; padding: 0 14px; background: var(--desk); font-size: 13px; white-space: nowrap; }
 .imgbar button.rm { background: var(--danger); color: #fff; }
+
+/* Barra do desenho */
+.drawbar { display: flex; flex-direction: column; gap: 6px; }
+.drow { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.swatch {
+  flex: none; width: 34px; height: 34px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid color-mix(in srgb, var(--ui-fg) 30%, transparent); background: var(--c);
+  -webkit-tap-highlight-color: transparent;
+}
+.swatch[aria-pressed="true"] { outline: 3px solid var(--accent); outline-offset: 2px; }
+.tbtn {
+  flex: 1; min-width: 0; min-height: 40px; padding: 0 4px;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 10px; cursor: pointer;
+  background: var(--btn); color: var(--ui-fg);
+  font: 600 12px/1 var(--font-ui); -webkit-tap-highlight-color: transparent;
+}
+.tbtn[aria-pressed="true"] { outline: 2px solid var(--accent); background: var(--desk); }
+.tbtn .dot { display: block; border-radius: 50%; background: var(--ui-fg); }
+.tbtn.done { background: var(--ui-fg); color: var(--btn); }
+.tbtn.armed { background: var(--danger); color: #fff; }
+
+/* Menu Mais */
+.menu {
+  position: absolute; left: 50%; bottom: 12px; z-index: 8; transform: translateX(-50%);
+  width: min(88%, 330px); display: flex; flex-direction: column; gap: 4px; padding: 8px;
+  background: var(--btn); border-radius: 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, .4);
+}
+.menu button {
+  min-height: 46px; padding: 0 14px; border: 0; border-radius: 10px; text-align: left; cursor: pointer;
+  background: var(--desk); color: var(--ui-fg); font: 600 14px/1.2 var(--font-ui);
+}
+.menu button.armed { background: var(--danger); color: #fff; }
 
 @media (prefers-reduced-motion: reduce) { .leaf { transition-duration: .01s; } }
 </style>
@@ -231,6 +294,7 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
       <button type="button" id="frontBtn">Trazer para frente</button>
       <button type="button" id="rmBtn" class="rm">Remover imagem</button>
     </div>
+    <div class="readtag" id="readtag" hidden></div>
     <button type="button" class="snd" id="sndBtn" aria-pressed="true" aria-label="Som ao virar a página">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M4 9v6h4l5 4V5L8 9H4z"/>
@@ -238,82 +302,174 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
         <g class="off"><path d="M16 9l5 6M21 9l-5 6"/></g>
       </svg>
     </button>
+    <div class="menu" id="menu" hidden></div>
+    <div class="toast" id="toast" role="status" hidden></div>
   </div>
 </div>
 
-<div class="bar" id="bar">
-  <button type="button" id="prev" aria-label="Página anterior">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Anterior</span>
-  </button>
-  <button type="button" id="imgBtn" aria-label="Inserir imagem">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 18l5-5 4 4 3-3 4 4"/></svg><span>Imagem</span>
-  </button>
-  <button type="button" id="newBtn" aria-label="Nova página">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Nova</span>
-  </button>
-  <button type="button" id="delBtn" aria-label="Apagar página">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span>Apagar</span>
-  </button>
-  <button type="button" id="next" aria-label="Próxima página">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span>Próxima</span>
-  </button>
+<div class="dock">
+  <div class="bar" id="bar">
+    <button type="button" class="arrow" id="prev" aria-label="Página anterior">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <button type="button" id="imgBtn" aria-label="Inserir imagem">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 18l5-5 4 4 3-3 4 4"/></svg><span>Imagem</span>
+    </button>
+    <button type="button" id="drawBtn" aria-label="Desenhar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11a2.1 2.1 0 00-3-3L5 16l-1 4z"/><path d="M14 7l3 3"/></svg><span>Desenhar</span>
+    </button>
+    <button type="button" id="newBtn" aria-label="Nova página">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Nova</span>
+    </button>
+    <button type="button" id="moreBtn" aria-label="Mais opções">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Mais</span>
+    </button>
+    <button type="button" class="arrow" id="next" aria-label="Próxima página">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+  <div class="drawbar" id="drawbar" hidden>
+    <div class="drow">
+      <button type="button" class="swatch" data-c="#22201b" style="--c:#22201b" aria-label="Preto" aria-pressed="true"></button>
+      <button type="button" class="swatch" data-c="#ffffff" style="--c:#ffffff" aria-label="Branco" aria-pressed="false"></button>
+      <button type="button" class="swatch" data-c="#dcb870" style="--c:#dcb870" aria-label="Dourado" aria-pressed="false"></button>
+      <button type="button" class="swatch" data-c="#d64545" style="--c:#d64545" aria-label="Vermelho" aria-pressed="false"></button>
+      <button type="button" class="swatch" data-c="#2f78c4" style="--c:#2f78c4" aria-label="Azul" aria-pressed="false"></button>
+      <button type="button" class="swatch" data-c="#2e9a5b" style="--c:#2e9a5b" aria-label="Verde" aria-pressed="false"></button>
+      <button type="button" class="swatch" data-c="#f0a32b" style="--c:#f0a32b" aria-label="Laranja" aria-pressed="false"></button>
+      <button type="button" class="tbtn" id="eraserBtn" aria-pressed="false">Borracha</button>
+    </div>
+    <div class="drow">
+      <button type="button" class="tbtn sz" data-s="0.004" aria-label="Traço fino" aria-pressed="false"><span class="dot" style="width:4px;height:4px"></span></button>
+      <button type="button" class="tbtn sz" data-s="0.009" aria-label="Traço médio" aria-pressed="true"><span class="dot" style="width:8px;height:8px"></span></button>
+      <button type="button" class="tbtn sz" data-s="0.022" aria-label="Traço grosso" aria-pressed="false"><span class="dot" style="width:14px;height:14px"></span></button>
+      <button type="button" class="tbtn" id="undoBtn">Desfazer</button>
+      <button type="button" class="tbtn" id="clearBtn">Limpar</button>
+      <button type="button" class="tbtn done" id="doneBtn">Pronto</button>
+    </div>
+  </div>
 </div>
 <input type="file" id="file" accept="image/*" multiple hidden>
+<input type="file" id="openFile" hidden>
 
 <script>
 (function () {
   var $ = function (s) { return document.querySelector(s); };
-  var book = $('#book'), pageEl = $('#page'), bar = $('#bar');
-  var bPrev = $('#prev'), bNext = $('#next'), bImg = $('#imgBtn'), bNew = $('#newBtn'), bDel = $('#delBtn');
-  var file = $('#file'), imgbar = $('#imgbar'), bSnd = $('#sndBtn');
+  var book = $('#book'), pageEl = $('#page'), bar = $('#bar'), drawbar = $('#drawbar');
+  var bPrev = $('#prev'), bNext = $('#next'), bImg = $('#imgBtn'), bDraw = $('#drawBtn'), bNew = $('#newBtn'), bMore = $('#moreBtn');
+  var file = $('#file'), openFile = $('#openFile'), imgbar = $('#imgbar'), bSnd = $('#sndBtn');
+  var menu = $('#menu'), toastEl = $('#toast'), readtag = $('#readtag');
 
   function uid() { return Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3); }
-  function blankPage() { return { t: '', im: [] }; }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function num(v, d, a, b) { v = Number(v); if (!isFinite(v)) v = d; return clamp(v, a, b); }
   function dist(a, b) { return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)); }
   function ang(a, b) { return Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI; }
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
   }
 
-  var state = {
-    title: 'Meu livro',
-    pages: [
-      {
-        t: '<div>Este é o seu livro. Toque aqui e escreva o que quiser.</div><div><br></div><div>Use o botão Imagem para colocar uma foto. Arraste a foto para mudar de lugar, puxe as bolinhas dos cantos para mudar o tamanho e use a bolinha de baixo para girar. Com dois dedos você também pode aumentar e girar.</div><div><br></div><div>Deslize o dedo para os lados, ou use Anterior e Próxima, para virar a página. Tudo fica salvo neste aparelho.</div>',
-        im: []
-      },
-      blankPage()
-    ],
-    cur: 0
-  };
-  var busy = false, selId = null, saveTimer = null, delTimer = null;
-  var pointers = new Map(), gesture = null;
+  /* ---------- Modelo do livro ---------- */
+  function blankPage() { return { t: '', im: [], draw: [] }; }
+  function defaultBook() {
+    return {
+      title: 'Meu livro', cur: 0,
+      cover: { tx: 12, ty: 46, im: [], draw: [] },
+      pages: [
+        {
+          t: '<div>Este é o seu livro. Toque aqui e escreva o que quiser.</div><div><br></div><div>Imagem coloca uma foto: arraste para mudar de lugar, puxe as bolinhas dos cantos para o tamanho e use a bolinha de baixo para girar.</div><div><br></div><div>Desenhar deixa você rabiscar na página, e também na capa. Na capa, a alça dourada move o título.</div><div><br></div><div>Em Mais você exporta o livro para outras pessoas abrirem no app. Deslize o dedo para os lados para virar a página.</div>',
+          im: [], draw: []
+        },
+        blankPage()
+      ]
+    };
+  }
 
-  /* Aceita livros salvos antes: fotos que estavam dentro do texto viram fotos livres */
-  function normalizePage(p) {
-    var html = '', im = [];
-    if (p && typeof p === 'object') {
-      html = String(p.t || '');
-      if (Array.isArray(p.im)) {
-        im = p.im.filter(function (it) { return it && it.src; }).map(function (it) {
-          return { id: String(it.id || uid()), src: String(it.src), x: Number(it.x) || 0, y: Number(it.y) || 0, w: Number(it.w) || 50, r: Number(it.r) || 0 };
-        });
-      }
-    } else {
-      html = String(p || '');
-    }
+  var store = { own: defaultBook(), reading: null, active: 'own' };
+  var state = store.own;
+  function readOnly() { return !!store.reading && state === store.reading; }
+
+  /* ---------- Limpeza de dados (arquivos de outras pessoas são tratados como não confiáveis) ---------- */
+  var IMG_RE = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+\/=]+$/;
+  var COL_RE = /^#[0-9a-fA-F]{6}$/;
+  var BLOCK = { div: 1, p: 1, li: 1, h1: 1, h2: 1, h3: 1, h4: 1, h5: 1, h6: 1, blockquote: 1, pre: 1 };
+  var SKIP = { script: 1, style: 1, iframe: 1, object: 1, embed: 1, link: 1, meta: 1, template: 1, svg: 1 };
+
+  function cleanText(html) {
     var tpl = document.createElement('template');
-    tpl.innerHTML = html;
-    var old = tpl.content.querySelectorAll('img');
-    if (old.length) {
-      Array.prototype.forEach.call(old, function (img, k) {
-        im.push({ id: uid(), src: img.getAttribute('src') || '', x: Math.min(40, 18 + k * 3), y: Math.min(60, 8 + k * 6), w: 60, r: 0 });
-        img.remove();
+    tpl.innerHTML = String(html == null ? '' : html);
+    var imgs = [];
+    function walk(node) {
+      var out = '';
+      Array.prototype.forEach.call(node.childNodes, function (n) {
+        if (n.nodeType === 3) { out += esc(n.nodeValue); return; }
+        if (n.nodeType !== 1) return;
+        var tag = n.tagName.toLowerCase();
+        if (tag === 'br') out += '<br>';
+        else if (tag === 'img') { var s = n.getAttribute('src') || ''; if (IMG_RE.test(s)) imgs.push({ src: s }); }
+        else if (SKIP[tag]) { /* descartado */ }
+        else if (BLOCK[tag]) out += '<div>' + walk(n) + '</div>';
+        else out += walk(n);
       });
-      html = tpl.innerHTML;
+      return out;
     }
-    return { t: html, im: im };
+    return { t: walk(tpl.content), imgs: imgs };
+  }
+
+  function cleanImgs(arr) {
+    return (Array.isArray(arr) ? arr : []).slice(0, 60).filter(function (it) {
+      return it && typeof it.src === 'string' && IMG_RE.test(it.src);
+    }).map(function (it) {
+      return { id: uid(), src: it.src, x: num(it.x, 10, -50, 150), y: num(it.y, 10, -50, 150), w: num(it.w, 50, 5, 200), r: num(it.r, 0, -360, 360) };
+    });
+  }
+
+  function cleanDraw(arr) {
+    var out = [];
+    (Array.isArray(arr) ? arr : []).slice(0, 4000).forEach(function (s) {
+      if (!s || !Array.isArray(s.p)) return;
+      var p = [];
+      for (var i = 0; i < s.p.length && i < 20000; i++) {
+        var v = Number(s.p[i]);
+        if (!isFinite(v)) return;
+        p.push(Math.round(clamp(v, -5, 20) * 10000) / 10000);
+      }
+      if (p.length < 2) return;
+      if (p.length % 2) p.pop();
+      out.push({ c: COL_RE.test(String(s.c)) ? String(s.c) : '#22201b', w: num(s.w, 0.009, 0.001, 0.1), e: s.e ? 1 : 0, p: p });
+    });
+    return out;
+  }
+
+  function normalizePage(p) {
+    var html, im = [], draw = [];
+    if (p && typeof p === 'object') { html = p.t; im = cleanImgs(p.im); draw = cleanDraw(p.draw); } else { html = p; }
+    var c = cleanText(html);
+    c.imgs.forEach(function (o, k) {
+      if (im.length < 60) im.push({ id: uid(), src: o.src, x: Math.min(40, 18 + k * 3), y: Math.min(60, 8 + k * 6), w: 60, r: 0 });
+    });
+    return { t: c.t.slice(0, 200000), im: im, draw: draw };
+  }
+
+  function normalizeBook(raw) {
+    raw = raw && typeof raw === 'object' ? raw : {};
+    var title = String(raw.title == null ? 'Meu livro' : raw.title).replace(/\s+/g, ' ').slice(0, 60);
+    var pages = (Array.isArray(raw.pages) ? raw.pages : []).slice(0, 300).map(normalizePage);
+    if (!pages.length) pages.push(blankPage());
+    var c = raw.cover && typeof raw.cover === 'object' ? raw.cover : {};
+    var cover = { tx: num(c.tx, 12, 0, 24), ty: num(c.ty, 46, 8, 88), im: cleanImgs(c.im), draw: cleanDraw(c.draw) };
+    return { title: title, cur: clamp(Math.floor(Number(raw.cur)) || 0, 0, pages.length), cover: cover, pages: pages };
+  }
+
+  function normalizeStore(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (raw.own && typeof raw.own === 'object') {
+      var own = normalizeBook(raw.own);
+      var reading = raw.reading && typeof raw.reading === 'object' ? normalizeBook(raw.reading) : null;
+      return { own: own, reading: reading, active: raw.active === 'reading' && reading ? 'reading' : 'own' };
+    }
+    if (Array.isArray(raw.pages) && raw.pages.length) return { own: normalizeBook(raw), reading: null, active: 'own' };
+    return null;
   }
 
   /* ---------- Som de virar página ---------- */
@@ -363,58 +519,75 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
     if (soundOn) playFlip();
   });
 
+  /* ---------- Aviso rápido ---------- */
+  var toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg; toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.hidden = true; }, 4200);
+  }
+
   /* ---------- Montagem das páginas ---------- */
+  var MOVE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>';
+
+  function curDoc() { return state.cur === 0 ? state.cover : state.pages[state.cur - 1]; }
+
   function boxHTML(it) {
     return '<div class="pimg" data-id="' + esc(it.id) + '" style="left:' + it.x + '%;top:' + it.y + '%;width:' + it.w + '%;transform:rotate(' + it.r + 'deg)">' +
       '<img src="' + esc(it.src) + '" alt="Imagem da página" draggable="false"></div>';
   }
 
   function inner(i, editable) {
-    var ce = editable ? 'true' : 'false';
+    var edit = editable && !readOnly();
+    var ce = edit ? 'true' : 'false';
+    var doc = i === 0 ? state.cover : state.pages[i - 1];
+    var layer = '<div class="layer">' + doc.im.map(boxHTML).join('') + '</div>';
+    var cv = '<canvas class="draw"></canvas>';
     if (i === 0) {
       var n = state.pages.length;
-      return '<div class="cover-frame">' +
-        '<div class="cover-kicker">Caderno</div>' +
-        '<div><div class="cover-title" contenteditable="' + ce + '" data-placeholder="Título do livro" spellcheck="false">' + esc(state.title) + '</div><div class="cover-rule"></div></div>' +
-        '<div class="cover-foot">' + n + (n === 1 ? ' página' : ' páginas') + '</div></div>';
+      return '<div class="cover-frame"><div class="cover-kicker">Caderno</div>' +
+        '<div class="cover-foot">' + n + (n === 1 ? ' página' : ' páginas') + '</div></div>' + layer +
+        '<div class="title-box" style="left:' + state.cover.tx + '%;top:' + state.cover.ty + '%">' +
+        (edit ? '<div class="grip" role="button" aria-label="Mover o título">' + MOVE_ICON + '</div>' : '') +
+        '<div class="cover-title" contenteditable="' + ce + '" data-placeholder="Título do livro" spellcheck="false">' + esc(state.title) + '</div>' +
+        '<div class="cover-rule"></div></div>' + cv;
     }
-    var pg = state.pages[i - 1];
-    return '<div class="content" contenteditable="' + ce + '" data-placeholder="Comece a escrever…">' + pg.t + '</div>' +
-      '<div class="layer">' + pg.im.map(boxHTML).join('') + '</div>' +
-      '<div class="folio">' + i + ' / ' + state.pages.length + '</div>';
+    return '<div class="content" contenteditable="' + ce + '" data-placeholder="Comece a escrever…">' + doc.t + '</div>' +
+      layer + '<div class="folio">' + i + ' / ' + state.pages.length + '</div>' + cv;
   }
 
   function render(editable) {
     if (editable === undefined) editable = true;
-    pageEl.className = 'sheet page' + (state.cur === 0 ? ' cover' : '');
+    pageEl.className = 'sheet page' + (state.cur === 0 ? ' cover' : '') + (drawing ? ' drawing' : '');
     pageEl.innerHTML = inner(state.cur, editable);
     selId = null; imgbar.hidden = true;
-    pointers.clear(); gesture = null;
+    pointers.clear(); gesture = null; tdrag = null; strokeNow = null; drawPid = null;
+    paintInto(pageEl, state.cur);
     updateBar();
+    updateReadTag();
   }
 
-  function resetDel() {
-    clearTimeout(delTimer);
-    bDel.classList.remove('armed');
-    bDel.querySelector('span').textContent = 'Apagar';
+  function updateReadTag() {
+    var ro = readOnly();
+    readtag.hidden = !ro;
+    if (ro) readtag.textContent = 'Lendo: ' + (state.title || 'sem título');
   }
 
   function updateBar() {
-    var cover = state.cur === 0;
-    bPrev.disabled = busy || cover;
+    var ro = readOnly();
+    bPrev.disabled = busy || state.cur === 0;
     bNext.disabled = busy || state.cur === state.pages.length;
-    bImg.disabled = busy || cover;
-    bDel.disabled = busy || cover;
-    bNew.disabled = busy;
-    resetDel();
+    bImg.disabled = busy || ro;
+    bDraw.disabled = busy || ro;
+    bNew.disabled = busy || ro;
+    bMore.disabled = busy;
   }
 
   function editor() { return pageEl.querySelector('.content'); }
-  function curPage() { return state.cur > 0 ? state.pages[state.cur - 1] : null; }
 
   function commitPage() {
-    var c = editor(), pg = curPage();
-    if (c && pg) pg.t = c.innerHTML;
+    var c = editor();
+    if (c && state.cur > 0 && !readOnly()) state.pages[state.cur - 1].t = c.innerHTML;
     queueSave();
   }
 
@@ -439,7 +612,7 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
     });
   }
   function persist() {
-    var snap = JSON.parse(JSON.stringify(state));
+    var snap = JSON.parse(JSON.stringify({ own: store.own, reading: store.reading, active: store.active }));
     return idb().then(function (d) {
       return new Promise(function (res, rej) {
         var tx = d.transaction('kv', 'readwrite');
@@ -450,11 +623,13 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
       try { localStorage.setItem('livro-de-notas', JSON.stringify(snap)); } catch (e) {}
     });
   }
+  var saveTimer = null;
   function queueSave() { clearTimeout(saveTimer); saveTimer = setTimeout(persist, 500); }
   document.addEventListener('visibilitychange', function () { if (document.hidden) persist(); });
 
   /* ---------- Texto ---------- */
   pageEl.addEventListener('input', function (e) {
+    if (readOnly()) return;
     var t = e.target.closest ? e.target.closest('.cover-title') : null;
     if (t) { state.title = t.textContent.slice(0, 60); queueSave(); return; }
     var c = editor();
@@ -475,7 +650,7 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
     e.preventDefault();
     var cd = e.clipboardData;
     var imgs = Array.prototype.filter.call(cd.files || [], function (f) { return f.type.indexOf('image/') === 0; });
-    if (imgs.length && host.classList.contains('content')) { addFiles(imgs); return; }
+    if (imgs.length) { addFiles(imgs); return; }
     var t = cd.getData('text/plain');
     if (host.classList.contains('cover-title')) t = t.replace(/\s+/g, ' ');
     document.execCommand('insertText', false, t);
@@ -506,17 +681,17 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
   }
 
   function insertImage(src) {
-    var pg = curPage(), layer = pageEl.querySelector('.layer');
-    if (busy || !pg || !layer) return;
-    var n = pg.im.length;
+    var doc = curDoc(), layer = pageEl.querySelector('.layer');
+    if (busy || readOnly() || !doc || !layer) return;
+    var n = doc.im.length;
     var it = { id: uid(), src: src, x: Math.min(40, 20 + n * 3), y: Math.min(60, 10 + n * 6), w: 60, r: 0 };
-    pg.im.push(it);
+    doc.im.push(it);
     layer.insertAdjacentHTML('beforeend', boxHTML(it));
     selectImg(it.id);
     queueSave();
   }
 
-  bImg.addEventListener('click', function () { if (!busy && state.cur > 0) file.click(); });
+  bImg.addEventListener('click', function () { if (!busy && !readOnly()) file.click(); });
   file.addEventListener('change', function () {
     var fs = Array.prototype.slice.call(file.files || []);
     file.value = '';
@@ -524,10 +699,12 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
   });
 
   /* ---------- Fotos: selecionar, mover, redimensionar, girar ---------- */
+  var selId = null, pointers = new Map(), gesture = null;
+
   function curItem() {
-    var pg = curPage();
-    if (!selId || !pg) return null;
-    for (var k = 0; k < pg.im.length; k++) if (pg.im[k].id === selId) return pg.im[k];
+    var d = curDoc();
+    if (!selId || !d) return null;
+    for (var k = 0; k < d.im.length; k++) if (d.im[k].id === selId) return d.im[k];
     return null;
   }
   function boxById(id) { return id ? pageEl.querySelector('.pimg[data-id="' + id + '"]') : null; }
@@ -594,8 +771,173 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
     };
   }
 
+  /* ---------- Título da capa: mover ---------- */
+  var tdrag = null;
+  function titleDown(e) {
+    var box = pageEl.querySelector('.title-box');
+    if (!box) return;
+    tdrag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, tx: state.cover.tx, ty: state.cover.ty, W: pageEl.clientWidth, H: pageEl.clientHeight, box: box };
+    try { pageEl.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
+  }
+  function titleMove(e) {
+    var d = tdrag;
+    if (!d || e.pointerId !== d.id) return;
+    state.cover.tx = Math.round(clamp(d.tx + (e.clientX - d.sx) / d.W * 100, 0, 24) * 10) / 10;
+    state.cover.ty = Math.round(clamp(d.ty + (e.clientY - d.sy) / d.H * 100, 8, 88) * 10) / 10;
+    d.box.style.left = state.cover.tx + '%';
+    d.box.style.top = state.cover.ty + '%';
+  }
+
+  /* ---------- Desenho ---------- */
+  var drawing = false, strokeNow = null, drawPid = null, clearArmed = false, clearTimer = null;
+  var tool = { c: '#22201b', s: 0.009, eraser: false };
+  var swatches = Array.prototype.slice.call(document.querySelectorAll('.swatch'));
+  var sizes = Array.prototype.slice.call(document.querySelectorAll('.sz'));
+  var eraserBtn = $('#eraserBtn'), undoBtn = $('#undoBtn'), clearBtn = $('#clearBtn'), doneBtn = $('#doneBtn');
+
+  function canvasEl() { return pageEl.querySelector('canvas.draw'); }
+
+  function drawStroke(x, s, W) {
+    var p = s.p;
+    if (p.length < 2) return;
+    x.save();
+    x.lineCap = 'round'; x.lineJoin = 'round';
+    x.lineWidth = s.w * W * (s.e ? 3 : 1);
+    x.globalCompositeOperation = s.e ? 'destination-out' : 'source-over';
+    x.strokeStyle = s.c; x.fillStyle = s.c;
+    if (p.length === 2) {
+      x.beginPath(); x.arc(p[0] * W, p[1] * W, x.lineWidth / 2, 0, Math.PI * 2); x.fill();
+    } else {
+      x.beginPath(); x.moveTo(p[0] * W, p[1] * W);
+      for (var i = 2; i < p.length - 2; i += 2) {
+        x.quadraticCurveTo(p[i] * W, p[i + 1] * W, (p[i] + p[i + 2]) / 2 * W, (p[i + 1] + p[i + 3]) / 2 * W);
+      }
+      x.lineTo(p[p.length - 2] * W, p[p.length - 1] * W);
+      x.stroke();
+    }
+    x.restore();
+  }
+
+  function paintCanvas(cv, strokes, W, H) {
+    if (!cv || !W || !H) return;
+    var x = cv.getContext && cv.getContext('2d');
+    if (!x) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.max(1, Math.round(W * dpr));
+    cv.height = Math.max(1, Math.round(H * dpr));
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.clearRect(0, 0, W, H);
+    strokes.forEach(function (s) { drawStroke(x, s, W); });
+  }
+
+  function paintInto(root, idx) {
+    var cv = root.querySelector('canvas.draw');
+    var doc = idx === 0 ? state.cover : state.pages[idx - 1];
+    if (cv && doc) paintCanvas(cv, doc.draw, pageEl.clientWidth, pageEl.clientHeight);
+  }
+
+  function liveSeg(x, s, W, a, b) {
+    x.save();
+    x.lineCap = 'round'; x.lineJoin = 'round';
+    x.lineWidth = s.w * W * (s.e ? 3 : 1);
+    x.globalCompositeOperation = s.e ? 'destination-out' : 'source-over';
+    x.strokeStyle = s.c;
+    x.beginPath(); x.moveTo(a[0] * W, a[1] * W); x.lineTo(b[0] * W, b[1] * W); x.stroke();
+    x.restore();
+  }
+
+  function drawDown(e) {
+    if (drawPid !== null) return;
+    var cv = canvasEl(), doc = curDoc();
+    if (!cv || !doc) return;
+    var r = cv.getBoundingClientRect(), W = r.width;
+    strokeNow = { c: tool.c, w: tool.s, e: tool.eraser ? 1 : 0, p: [Math.round((e.clientX - r.left) / W * 10000) / 10000, Math.round((e.clientY - r.top) / W * 10000) / 10000] };
+    doc.draw.push(strokeNow);
+    drawPid = e.pointerId;
+    try { pageEl.setPointerCapture(e.pointerId); } catch (_) {}
+    var x = cv.getContext && cv.getContext('2d');
+    if (x) drawStroke(x, strokeNow, W);
+    e.preventDefault();
+  }
+  function drawMove(e) {
+    if (e.pointerId !== drawPid || !strokeNow) return;
+    var cv = canvasEl();
+    if (!cv) return;
+    var r = cv.getBoundingClientRect(), W = r.width;
+    var nx = Math.round((e.clientX - r.left) / W * 10000) / 10000, ny = Math.round((e.clientY - r.top) / W * 10000) / 10000;
+    var p = strokeNow.p, lx = p[p.length - 2], ly = p[p.length - 1];
+    if (Math.abs(nx - lx) < 0.002 && Math.abs(ny - ly) < 0.002) return;
+    if (p.length >= 20000) return;
+    p.push(nx, ny);
+    var x = cv.getContext && cv.getContext('2d');
+    if (x) liveSeg(x, strokeNow, W, [lx, ly], [nx, ny]);
+  }
+  function drawUp(e) {
+    if (e.pointerId !== drawPid) return;
+    try { pageEl.releasePointerCapture(e.pointerId); } catch (_) {}
+    strokeNow = null; drawPid = null;
+    paintInto(pageEl, state.cur);
+    queueSave();
+  }
+
+  function syncTools() {
+    swatches.forEach(function (b) { b.setAttribute('aria-pressed', String(!tool.eraser && b.getAttribute('data-c') === tool.c)); });
+    sizes.forEach(function (b) { b.setAttribute('aria-pressed', String(parseFloat(b.getAttribute('data-s')) === tool.s)); });
+    eraserBtn.setAttribute('aria-pressed', String(tool.eraser));
+  }
+  swatches.forEach(function (b) {
+    b.addEventListener('click', function () { tool.c = b.getAttribute('data-c'); tool.eraser = false; syncTools(); });
+  });
+  sizes.forEach(function (b) {
+    b.addEventListener('click', function () { tool.s = parseFloat(b.getAttribute('data-s')); syncTools(); });
+  });
+  eraserBtn.addEventListener('click', function () { tool.eraser = !tool.eraser; syncTools(); });
+  undoBtn.addEventListener('click', function () {
+    var d = curDoc();
+    if (d && d.draw.length) { d.draw.pop(); paintInto(pageEl, state.cur); queueSave(); }
+  });
+  function resetClear() { clearArmed = false; clearTimeout(clearTimer); clearBtn.classList.remove('armed'); clearBtn.textContent = 'Limpar'; }
+  clearBtn.addEventListener('click', function () {
+    var d = curDoc();
+    if (!d || !d.draw.length) return;
+    if (!clearArmed) {
+      clearArmed = true; clearBtn.classList.add('armed'); clearBtn.textContent = 'Confirmar';
+      clearTimer = setTimeout(resetClear, 3000);
+      return;
+    }
+    d.draw = []; resetClear(); paintInto(pageEl, state.cur); queueSave();
+  });
+  doneBtn.addEventListener('click', function () { exitDraw(); });
+
+  function enterDraw() {
+    if (busy || readOnly() || drawing) return;
+    closeMenu(); selectImg(null);
+    var s = window.getSelection(); if (s) s.removeAllRanges();
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    if (state.cur === 0 && !tool.eraser && tool.c === '#22201b') tool.c = '#dcb870';
+    syncTools();
+    drawing = true;
+    pageEl.classList.add('drawing');
+    bar.hidden = true; drawbar.hidden = false;
+  }
+  function exitDraw() {
+    if (!drawing) return;
+    drawing = false; strokeNow = null; drawPid = null;
+    pageEl.classList.remove('drawing');
+    drawbar.hidden = true; bar.hidden = false;
+    resetClear();
+    queueSave();
+  }
+  bDraw.addEventListener('click', enterDraw);
+
+  /* ---------- Gestos na página (fotos, título, desenho) ---------- */
   pageEl.addEventListener('pointerdown', function (e) {
     if (busy) return;
+    if (drawing) { drawDown(e); return; }
+    if (readOnly()) return;
+    var grip = e.target.closest ? e.target.closest('.grip') : null;
+    if (grip) { titleDown(e); return; }
     if (gesture && selId && pointers.size === 1) {
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       try { pageEl.setPointerCapture(e.pointerId); } catch (_) {}
@@ -614,6 +956,8 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
   });
 
   pageEl.addEventListener('pointermove', function (e) {
+    if (drawing) { drawMove(e); return; }
+    if (tdrag) { titleMove(e); return; }
     if (!gesture || !pointers.has(e.pointerId)) return;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     var g = gesture, r = pageEl.getBoundingClientRect(), pts = [];
@@ -639,6 +983,13 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
   });
 
   function onUp(e) {
+    if (drawing) { drawUp(e); return; }
+    if (tdrag && e.pointerId === tdrag.id) {
+      tdrag = null;
+      try { pageEl.releasePointerCapture(e.pointerId); } catch (_) {}
+      queueSave();
+      return;
+    }
     if (!pointers.has(e.pointerId)) return;
     pointers.delete(e.pointerId);
     try { pageEl.releasePointerCapture(e.pointerId); } catch (_) {}
@@ -649,9 +1000,9 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
   pageEl.addEventListener('pointercancel', onUp);
 
   function removeSel() {
-    var pg = curPage(), id = selId;
-    if (!pg || !id) return;
-    pg.im = pg.im.filter(function (it) { return it.id !== id; });
+    var d = curDoc(), id = selId;
+    if (!d || !id || readOnly()) return;
+    d.im = d.im.filter(function (it) { return it.id !== id; });
     var b = boxById(id); if (b) b.remove();
     selectImg(null);
     queueSave();
@@ -659,12 +1010,12 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
   $('#rmBtn').addEventListener('click', removeSel);
 
   $('#frontBtn').addEventListener('click', function () {
-    var pg = curPage(), id = selId, layer = pageEl.querySelector('.layer');
-    if (!pg || !id || !layer) return;
+    var d = curDoc(), id = selId, layer = pageEl.querySelector('.layer');
+    if (!d || !id || !layer || readOnly()) return;
     var it = curItem(), b = boxById(id);
     if (!it || !b) return;
-    pg.im = pg.im.filter(function (x) { return x.id !== id; });
-    pg.im.push(it);
+    d.im = d.im.filter(function (x) { return x.id !== id; });
+    d.im.push(it);
     layer.appendChild(b);
     queueSave();
   });
@@ -675,10 +1026,153 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
     }
   });
 
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () { if (!busy && !strokeNow) paintInto(pageEl, state.cur); }).observe(pageEl);
+  }
+
+  /* ---------- Menu Mais, exportar e abrir livros ---------- */
+  function closeMenu() { menu.hidden = true; }
+
+  function slug(s) {
+    var t = String(s || '').normalize ? String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '') : String(s || '');
+    return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  }
+
+  function bookFile() {
+    commitPage();
+    var txt = JSON.stringify({ app: 'livro-de-notas', v: 2, exportedAt: new Date().toISOString(), book: state });
+    return new File([txt], (slug(state.title) || 'livro') + '.livro.json', { type: 'application/json' });
+  }
+
+  function downloadBook() {
+    try {
+      var f = bookFile(), url = URL.createObjectURL(f), a = document.createElement('a');
+      a.href = url; a.download = f.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      toast('Arquivo do livro gerado. Procure em Downloads: ' + f.name);
+    } catch (e) {
+      toast('Não consegui gerar o arquivo neste aparelho.');
+    }
+  }
+
+  function shareBook() {
+    var f;
+    try { f = bookFile(); } catch (e) { toast('Não consegui gerar o arquivo neste aparelho.'); return; }
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [f] })) {
+      navigator.share({ files: [f], title: state.title || 'Livro' }).catch(function (err) {
+        if (err && err.name === 'AbortError') return;
+        downloadBook();
+      });
+    } else {
+      downloadBook();
+    }
+  }
+
+  function openReading(b, name) {
+    exitDraw();
+    store.reading = b; store.active = 'reading';
+    state = b; state.cur = 0;
+    render(true);
+    queueSave();
+    toast('Livro "' + (name || 'sem título') + '" aberto para leitura.');
+  }
+
+  function importFile(f) {
+    if (!f) return;
+    if (f.size > 80 * 1024 * 1024) { toast('Esse arquivo é grande demais.'); return; }
+    var reader = new FileReader();
+    reader.onerror = function () { toast('Não consegui ler esse arquivo.'); };
+    reader.onload = function () {
+      var raw;
+      try { raw = JSON.parse(String(reader.result)); } catch (e) { raw = null; }
+      if (!raw || raw.app !== 'livro-de-notas' || !raw.book) { toast('Esse arquivo não é um livro deste app.'); return; }
+      var b = normalizeBook(raw.book);
+      openReading(b, b.title);
+    };
+    reader.readAsText(f);
+  }
+  openFile.addEventListener('change', function () {
+    var f = openFile.files && openFile.files[0];
+    openFile.value = '';
+    importFile(f);
+  });
+
+  function backToOwn() {
+    exitDraw();
+    store.active = 'own'; state = store.own;
+    render(true); queueSave();
+  }
+  function saveReadingAsOwn() {
+    if (!readOnly()) return;
+    store.own = normalizeBook(JSON.parse(JSON.stringify(state)));
+    store.reading = null; store.active = 'own'; state = store.own; state.cur = 0;
+    render(true); queueSave();
+    toast('Agora esse livro é o seu livro.');
+  }
+  function closeReading() {
+    store.reading = null; store.active = 'own'; state = store.own;
+    render(true); queueSave();
+  }
+  function deletePage() {
+    if (state.cur === 0 || readOnly()) return;
+    state.pages.splice(state.cur - 1, 1);
+    if (!state.pages.length) state.pages.push(blankPage());
+    state.cur = Math.min(state.cur, state.pages.length);
+    render(true); queueSave();
+  }
+
+  function addItem(label, fn, confirm) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.textContent = label;
+    var armed = false;
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (confirm && !armed) {
+        armed = true; b.classList.add('armed'); b.textContent = 'Toque de novo para confirmar';
+        setTimeout(function () { armed = false; b.classList.remove('armed'); b.textContent = label; }, 3000);
+        return;
+      }
+      closeMenu(); fn();
+    });
+    menu.appendChild(b);
+  }
+
+  function openMenu() {
+    if (busy) return;
+    exitDraw();
+    menu.innerHTML = '';
+    if (readOnly()) {
+      addItem('Voltar ao meu livro', backToOwn);
+      addItem('Salvar como meu livro (substitui o seu)', saveReadingAsOwn, true);
+      addItem('Abrir outro livro de um arquivo', function () { openFile.click(); });
+      addItem('Fechar este livro', closeReading, true);
+    } else {
+      addItem('Compartilhar livro', shareBook);
+      addItem('Salvar arquivo do livro', downloadBook);
+      addItem('Abrir livro de um arquivo', function () { openFile.click(); });
+      if (store.reading) addItem('Voltar ao livro que estava lendo', function () {
+        store.active = 'reading'; state = store.reading; render(true); queueSave();
+      });
+      if (state.cur > 0) addItem('Apagar esta página', deletePage, true);
+    }
+    menu.hidden = false;
+  }
+  bMore.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (!menu.hidden) { closeMenu(); return; }
+    openMenu();
+  });
+  document.addEventListener('click', function (e) {
+    if (!menu.hidden && !menu.contains(e.target)) closeMenu();
+  });
+
   /* ---------- Virar página ---------- */
+  var busy = false;
   function flip(dir, cb) {
     var to = state.cur + dir;
     if (busy || to < 0 || to > state.pages.length) return;
+    exitDraw(); closeMenu();
     busy = true;
     playFlip();
     selectImg(null);
@@ -694,6 +1188,7 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
     front.innerHTML = inner(showIdx, false);
     var back = document.createElement('div'); back.className = 'face back';
     leaf.appendChild(front); leaf.appendChild(back);
+    paintInto(front, showIdx);
 
     if (dir > 0) { state.cur = to; render(false); leaf.style.transform = 'rotateY(0deg)'; }
     else { leaf.style.transform = 'rotateY(-180deg)'; }
@@ -719,35 +1214,19 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
   bNext.addEventListener('click', function () { flip(1); });
 
   bNew.addEventListener('click', function () {
-    if (busy) return;
+    if (busy || readOnly()) return;
     commitPage();
     state.pages.splice(state.cur, 0, blankPage());
     flip(1, function () { var c = editor(); if (c) c.focus(); });
   });
 
-  bDel.addEventListener('click', function () {
-    if (busy || state.cur === 0) return;
-    if (!bDel.classList.contains('armed')) {
-      bDel.classList.add('armed');
-      bDel.querySelector('span').textContent = 'Confirmar';
-      clearTimeout(delTimer);
-      delTimer = setTimeout(resetDel, 3000);
-      return;
-    }
-    state.pages.splice(state.cur - 1, 1);
-    if (!state.pages.length) state.pages.push(blankPage());
-    state.cur = Math.min(state.cur, state.pages.length);
-    render(true);
-    queueSave();
-  });
-
   bar.addEventListener('mousedown', function (e) { e.preventDefault(); });
 
-  /* Deslizar para virar (não vale quando o dedo começa numa foto) */
+  /* Deslizar para virar (não vale quando o dedo começa numa foto, na alça do título ou no desenho) */
   var sx = 0, sy = 0, st = 0, blocked = false;
   book.addEventListener('touchstart', function (e) {
     var t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now();
-    blocked = e.touches.length > 1 || !!(e.target.closest && e.target.closest('.pimg'));
+    blocked = drawing || e.touches.length > 1 || !!(e.target.closest && e.target.closest('.pimg, .grip'));
   }, { passive: true });
   book.addEventListener('touchend', function (e) {
     if (blocked) { if (!e.touches.length) blocked = false; return; }
@@ -758,15 +1237,21 @@ button:focus-visible, .content:focus-visible, .cover-title:focus-visible { outli
 
   /* ---------- Início ---------- */
   render(true);
-  load().then(function (s) {
-    if (!s || !Array.isArray(s.pages) || !s.pages.length || busy) return;
-    state = {
-      title: String(s.title || 'Meu livro'),
-      pages: s.pages.map(normalizePage),
-      cur: Math.min(Math.max(0, s.cur | 0), s.pages.length)
-    };
+  load().then(function (raw) {
+    var st2 = normalizeStore(raw);
+    if (!st2 || busy) return;
+    store = st2;
+    state = store.active === 'reading' && store.reading ? store.reading : store.own;
     render(true);
   });
+
+  if (window.__LIVRO_TEST) {
+    window.__LIVRO_API = {
+      cleanText: cleanText, normalizeBook: normalizeBook, normalizeStore: normalizeStore,
+      getState: function () { return state; }, getStore: function () { return store; }, readOnly: readOnly,
+      importFile: importFile
+    };
+  }
 })();
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>
