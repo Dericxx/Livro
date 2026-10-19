@@ -1,6 +1,6 @@
 /* Guarda o app no aparelho para abrir sem internet.
    Com internet, os arquivos do app são sempre buscados de novo, então as atualizações chegam sozinhas. */
-var CACHE = 'livro-de-notas-v2';
+var CACHE = 'livro-de-notas-v3';
 var SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {
